@@ -1,0 +1,5 @@
+flats
+node_modules
+build
+deploymentResults.json
+.env

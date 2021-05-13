@@ -1,0 +1,34 @@
+{
+  "name": "launchpadx-contract",
+  "version": "1.0.0",
+  "description": "",
+  "main": "truffle-config.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "compile": "truffle compile",
+    "deploy:rinkeby": "truffle migrate --network rinkeby",
+    "deploy:bsctestnet": "truffle migrate --network bsctestnet",
+    "deploy:bsc": "truffle migrate --network bsc",
+    "flatten": "bash flatten.sh"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@openzeppelin/contracts": "^3.3.0",
+    "@truffle/hdwallet-provider": "^1.2.2",
+    "bignumber.js": "^9.0.1",
+    "bs58": "^4.0.1",
+    "dotenv": "^8.2.0",
+    "ipfs-mini": "^1.1.5",
+    "truffle-contract-size": "^2.0.1",
+    "truffle-flattener": "^1.5.0",
+    "web3": "^1.3.4"
+  },
+  "devDependencies": {
+    "truffle-plugin-verify": "^0.5.4"
+  }
+}
