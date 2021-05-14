@@ -125,6 +125,51 @@ contract BoostVolume is Context, Ownable {
         factory = _factory;
     }
 
+    function addLiquidity(address tokenA, address tokenB, uint256 tokenAAmount, uint256 tokenBAmount) private {
+        uniswapV2Router.addLiquidity(
+            tokenA,
+            tokenB,
+            tokenAAmount,
+            tokenBAmount,
+            0, // slippage is unavoidable
+            0, // slippage is unavoidable
+            address(this),
+            block.timestamp
+        );
+    }
+
+    function swapTokensForExactTokens(uint256 tokenAmount, address[] memory path) private {
+        uniswapV2Router.swapTokensForExactTokens(
+            0, // accept any amount of tokenB
+            tokenAmount,
+            path,
+            address(msg.sender),
+            block.timestamp
+        );
+    }
+
+    function swapExactTokensForTokens(uint256 tokenAmount, address[] memory path) private {
+        uniswapV2Router.swapExactTokensForTokens(
+            tokenAmount,
+            0, // accept any amount of tokenA
+            path,
+            address(msg.sender),
+            block.timestamp
+        );
+    }
+
+    function removeLiquidity(address tokenA, address tokenB, uint256 tokenAmount) private {
+        uniswapV2Router.removeLiquidity(
+            tokenA,
+            tokenB,
+            tokenAmount,
+            0, // accept any amount of tokenA
+            0, // accept any amount of tokenB
+            address(msg.sender),
+            block.timestamp
+        );
+    }
+
     function addSwapRemoveLiquidity(IERC20 tokenA, IERC20 tokenB, uint256 tokenAAmount, uint256 tokenBAmount) public {
         // split the tokenAAmount into halves
         uint256 halfTokenA = tokenAAmount.div(2);
@@ -142,47 +187,18 @@ contract BoostVolume is Context, Ownable {
         tokenB.approve(address(this), tokenBAmount);
 
         // add the liquidity
-        uniswapV2Router.addLiquidity(
-            address(tokenA),
-            address(tokenB),
-            halfTokenA,
-            halfTokenB,
-            0, // slippage is unavoidable
-            0, // slippage is unavoidable
-            address(this),
-            block.timestamp
-        );
+        addLiquidity(address(tokenA), address(tokenB), halfTokenA, halfTokenB);
 
         // swapTokensForExactTokens
-        uniswapV2Router.swapTokensForExactTokens(
-            0, // accept any amount of tokenB
-            otherHalfTokenA,
-            path,
-            address(this),
-            block.timestamp
-        );
+        swapTokensForExactTokens(otherHalfTokenA, path);
 
         // swapTokensForExactTokens
-        uniswapV2Router.swapExactTokensForTokens(
-            otherHalfTokenB,
-            0, // accept any amount of tokenA
-            path,
-            address(this),
-            block.timestamp
-        );
+        swapExactTokensForTokens(otherHalfTokenB, path);
 
         address pair = PancakeLibrary.pairFor(factory, address(tokenA), address(tokenB));
         uint256 liquidity = IERC20(pair).balanceOf(address(this));
 
         // removeLiquidity
-        uniswapV2Router.removeLiquidity(
-            address(tokenA),
-            address(tokenB),
-            liquidity,
-            0, // accept any amount of tokenA
-            0, // accept any amount of tokenB
-            address(this),
-            block.timestamp
-        );
+        removeLiquidity(address(tokenA), address(tokenB), liquidity);
     }
 }
