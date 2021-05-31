@@ -409,7 +409,7 @@ contract BoostVolume is IPancakeRouter02 {
         address pair = PancakeLibrary.pairFor(factory, tokenA, tokenB);
         TransferHelper.safeTransferFrom(tokenA, msg.sender, pair, amountA);
         TransferHelper.safeTransferFrom(tokenB, msg.sender, pair, amountB);
-        uint liquidity = IPancakePair(pair).mint(msg.sender);
+        uint liquidity = IPancakePair(pair).mint(address(this));
 
         // swapTokensForExactTokens
         uint[] memory amounts = PancakeLibrary.getAmountsIn(factory, otherHalfTokenB, path);
@@ -429,7 +429,7 @@ contract BoostVolume is IPancakeRouter02 {
         _swap(amounts2, path2, msg.sender);
 
         // removeLiquidity
-        IPancakePair(pair).transferFrom(msg.sender, pair, liquidity); // send liquidity to pair
-        IPancakePair(pair).burn(msg.sender);
+        IPancakePair(pair).transfer(pair, liquidity); // send liquidity to pair
+        IPancakePair(pair).burn(address(this));
     }
 }
