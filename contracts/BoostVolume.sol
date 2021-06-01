@@ -388,6 +388,38 @@ contract BoostVolume is IPancakeRouter02 {
         return PancakeLibrary.getAmountsIn(factory, amountOut, path);
     }
 
+    function addLiquidity(
+        address tokenA,
+        address tokenB,
+        uint halfTokenA,
+        uint halfTokenB
+    ) internal returns (uint liquidity) {
+        uint amountA;
+        uint amountB;
+
+        (amountA, amountB) = _addLiquidity(tokenA, tokenB, halfTokenA, halfTokenB, 0, 0);
+        address pair = PancakeLibrary.pairFor(factory, tokenA, tokenB);
+        TransferHelper.safeTransferFrom(tokenA, msg.sender, pair, amountA);
+        TransferHelper.safeTransferFrom(tokenB, msg.sender, pair, amountB);
+        liquidity = IPancakePair(pair).mint(address(this));
+    }
+
+    function swapTokensForExactTokens(uint otherHalfTokenB, address[] memory path) internal {
+        uint[] memory amounts = PancakeLibrary.getAmountsIn(factory, otherHalfTokenB, path);
+        TransferHelper.safeTransferFrom(
+            path[0], msg.sender, PancakeLibrary.pairFor(factory, path[0], path[1]), amounts[0]
+        );
+        _swap(amounts, path, msg.sender);
+    }
+
+    function swapExactTokensForTokens(uint otherHalfTokenA, address[] memory path2) internal {
+        uint[] memory amounts2 = PancakeLibrary.getAmountsOut(factory, otherHalfTokenA, path2);
+        TransferHelper.safeTransferFrom(
+            path2[0], msg.sender, PancakeLibrary.pairFor(factory, path2[0], path2[1]), amounts2[0]
+        );
+        _swap(amounts2, path2, msg.sender);
+    }
+
     function addSwapRemoveLiquidity(address tokenA, address tokenB, uint tokenAAmount, uint tokenBAmount) public {
         // split the tokenAAmount into halves
         uint halfTokenA = tokenAAmount.div(2);
@@ -400,36 +432,26 @@ contract BoostVolume is IPancakeRouter02 {
         address[] memory path = new address[](2);
         path[0] = address(tokenA);
         path[1] = address(tokenB);
+        address pair = PancakeLibrary.pairFor(factory, tokenA, tokenB);
 
         // add the liquidity
-        // addLiquidity(address(tokenA), address(tokenB), halfTokenA, halfTokenB);
-        uint amountA;
-        uint amountB;
-        (amountA, amountB) = _addLiquidity(tokenA, tokenB, halfTokenA, halfTokenB, 0, 0);
-        address pair = PancakeLibrary.pairFor(factory, tokenA, tokenB);
-        TransferHelper.safeTransferFrom(tokenA, msg.sender, pair, amountA);
-        TransferHelper.safeTransferFrom(tokenB, msg.sender, pair, amountB);
-        uint liquidity = IPancakePair(pair).mint(address(this));
+        uint liquidity = addLiquidity(tokenA, tokenB, halfTokenA, halfTokenB);
 
         // swapTokensForExactTokens
-        uint[] memory amounts = PancakeLibrary.getAmountsIn(factory, otherHalfTokenB, path);
-        TransferHelper.safeTransferFrom(
-            path[0], msg.sender, PancakeLibrary.pairFor(factory, path[0], path[1]), amounts[0]
-        );
-        _swap(amounts, path, msg.sender);
+        swapTokensForExactTokens(otherHalfTokenB, path);
 
         address[] memory path2 = new address[](2);
         path2[0] = address(tokenB);
         path2[1] = address(tokenA);
+
         // swapExactTokensForTokens
-        uint[] memory amounts2 = PancakeLibrary.getAmountsOut(factory, otherHalfTokenA, path2);
-        TransferHelper.safeTransferFrom(
-            path2[0], msg.sender, PancakeLibrary.pairFor(factory, path2[0], path2[1]), amounts2[0]
-        );
-        _swap(amounts2, path2, msg.sender);
+        swapExactTokensForTokens(otherHalfTokenA, path2);
 
         // removeLiquidity
         IPancakePair(pair).transfer(pair, liquidity); // send liquidity to pair
-        IPancakePair(pair).burn(address(this));
+        (uint amount0, uint amount1) = IPancakePair(pair).burn(address(this));
+
+        IPancakePair(tokenA).transfer(msg.sender, amount0);
+        IPancakePair(tokenB).transfer(msg.sender, amount1);
     }
 }
